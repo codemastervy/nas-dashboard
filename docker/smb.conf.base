@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# Base Samba configuration for nas-dashboard.
+#
+# This file is safe to edit -- the dashboard never rewrites it. Every share it
+# creates goes into the generated include at the bottom, one section per
+# folder you explicitly shared.
+# ---------------------------------------------------------------------------
+[global]
+   workgroup = WORKGROUP
+   server string = %h (nas-dashboard)
+   security = user
+   map to guest = Never
+   passdb backend = tdbsam
+
+   # SMB2 minimum: SMB1 is off by default because it is obsolete and unsafe.
+   # Raise nothing here unless you have a device that genuinely needs it.
+   server min protocol = SMB2_10
+   client min protocol = SMB2_10
+
+   # Encrypt when the client asks for it; do not force it, because forcing
+   # breaks a number of older phone SMB clients.
+   server smb encrypt = desired
+
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+   disable spoolss = yes
+
+   log file = /var/log/samba/log.%m
+   max log size = 1000
+   logging = file
+
+   # Sensible performance defaults for a NAS on gigabit ethernet.
+   socket options = TCP_NODELAY IPTOS_LOWDELAY
+   use sendfile = yes
+   aio read size = 16384
+   aio write size = 16384
+
+   # macOS interoperability. Note that `vfs objects` is deliberately NOT set
+   # here: a global module list is applied to IPC$ as well, so a missing or
+   # broken module takes down every connection with BAD_NETWORK_NAME rather
+   # than just degrading one share. The modules are loaded per-share instead.
+   fruit:aapl = yes
+   fruit:nfs_aces = no
+
+   # Nothing is exported by default. Every share below was added deliberately
+   # through the dashboard.
+   include = /etc/samba/shares.d/dashboard-shares.conf

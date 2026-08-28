@@ -48,6 +48,7 @@ Files written from a Mac over SMB, visible immediately in the browser.
 - [Why sharing is opt-in](#why-sharing-is-opt-in)
 - [How SMB sharing works under the hood](#how-smb-sharing-works-under-the-hood)
 - [Connecting from your devices](#connecting-from-your-devices)
+- [Backing up](#backing-up)
 - [Migrating from CasaOS](#migrating-from-casaos)
 - [Stack choice](#stack-choice)
 - [Configuration reference](#configuration-reference)
@@ -373,6 +374,31 @@ Create a user under **Users**, share a folder, tick that user, then:
 SMB1 is disabled (`server min protocol = SMB2_10`) because it is obsolete and
 unsafe. Encryption is `desired`, not `required` — forcing it breaks a number of
 older phone SMB clients.
+
+---
+
+## Backing up
+
+`./data` is the only thing here you cannot regenerate. It holds the share
+registry, your SMB users' **password hashes** (`data/samba`), the generated
+Samba config, and the session secret. Lose it and every share and every family
+member's login is gone.
+
+```bash
+# Stop first: Samba's tdb files are being written live, and copying them
+# while smbd is running can capture a torn database.
+docker compose stop
+sudo tar czf nas-dashboard-data-$(date +%F).tar.gz ./data
+docker compose start
+```
+
+Keep that archive somewhere that is **not** one of the disks this NAS serves.
+It contains password hashes, so treat it as a secret: `chmod 600`, and do not
+drop it in a shared folder.
+
+To restore, put `./data` back beside `docker-compose.yml` and
+`docker compose up -d` — shares and users come back exactly as they were, since
+the container rebuilds Samba's config from the registry at startup.
 
 ---
 

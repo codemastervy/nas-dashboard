@@ -1,0 +1,119 @@
+# ---------------------------------------------------------------------------
+# nas-dashboard
+#
+# Every mount and capability below is here for a stated reason. Read the
+# "Privileges" section of the README before trimming any of it -- some are
+# load-bearing for correctness (host stats), others only for optional features
+# (SMART), and the ones you don't need can safely go.
+# ---------------------------------------------------------------------------
+
+services:
+  nas-dashboard:
+    build: .
+    image: nas-dashboard:latest
+    container_name: nas-dashboard
+    restart: unless-stopped
+
+    # WHY host networking:
+    #   1. Samba needs 445/139 on the LAN, and NetBIOS discovery (nmbd) uses
+    #      broadcast, which does not survive a bridge NAT.
+    #   2. Network throughput widgets must see the host's real interfaces
+    #      (eth0, wlan0) to tell WiFi and Ethernet apart. Inside a bridge the
+    #      container sees only its own veth, so every reading would be wrong.
+    # Trade-off: the API port is published on every host interface. Bind it
+    # behind a reverse proxy or a firewall rule if the host faces the internet.
+    network_mode: host
+
+    environment:
+      # REQUIRED. The dashboard refuses to serve the API until this is set.
+      # Change it before first start.
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}"
+
+      # Set to false only on a network you fully trust. This turns off the
+      # login entirely -- anything that can reach port 8080 gets full access
+      # to every file on every mounted disk.
+      AUTH_ENABLED: "true"
+
+      # Poll interval for the live widgets, in seconds.
+      STATS_INTERVAL: "2"
+
+      # Optional features; both degrade to "unavailable" rather than failing.
+      ENABLE_SMART: "true"
+      ENABLE_GPU: "true"
+
+      # NetBIOS discovery. Turn off if you always connect by IP or hostname.
+      ENABLE_NMBD: "true"
+
+      TZ: "${TZ:-UTC}"
+
+    volumes:
+      # ---- Host statistics -------------------------------------------------
+      # THIS IS THE ONE PEOPLE GET WRONG. Without /host/proc, psutil reads the
+      # container's view and reports cgroup limits as though they were the
+      # machine's memory and CPU. Read-only; nothing is ever written here.
+      - /proc:/host/proc:ro
+      # Temperatures, GPU sysfs, and the wifi-vs-ethernet distinction all come
+      # from sysfs. Also read-only.
+      - /sys:/host/sys:ro
+      # The host's name. /proc/sys/kernel/hostname is UTS-namespaced, so the
+      # /host/proc mount above CANNOT see through it -- a bridged container
+      # would display its own container id as the hostname. With
+      # `network_mode: host` Docker inherits the right name anyway, so this is
+      # belt-and-braces; keep it if you ever drop host networking.
+      - /etc/hostname:/host/etc/hostname:ro
+
+      # ---- Persistent application state ------------------------------------
+      # Share registry, user display names, SMART cache, session secret.
+      # Lose this and your shares are gone; back it up.
+      - ./data:/data
+      # Samba's own database: password hashes (tdbsam) and share state. This
+      # must persist or every SMB user disappears on the next container build.
+      - ./data/samba:/var/lib/samba
+      # The generated share config. Kept on the host so you can read exactly
+      # what is being exported without entering the container.
+      - ./data/shares.d:/etc/samba/shares.d
+
+      # ---- Your actual data ------------------------------------------------
+      # Each entry becomes one "drive" in the file browser, shown as a separate
+      # top-level volume rather than one flattened tree. Edit these to match
+      # your machine; the container only ever sees what you list here.
+      #
+      # The examples below assume disks mounted at /mnt/... on the host.
+      - /mnt/data:/mnt/storage/data
+      # - /mnt/media:/mnt/storage/media
+      # - /srv/backups:/mnt/storage/backups
+      #
+      # To expose a whole disk rather than a directory, mount its mountpoint.
+      # Do NOT mount / -- the dashboard can delete anything it can see.
+
+    # ---- SMART drive health ------------------------------------------------
+    # Reading SMART means issuing ATA/NVMe pass-through ioctls, which needs
+    # both the device node and CAP_SYS_RAWIO. Comment this whole block out if
+    # you don't want it; the dashboard will show SMART as unavailable and
+    # explain why, and everything else keeps working.
+    cap_add:
+      - SYS_RAWIO       # ATA pass-through (smartctl on SATA/SAS)
+      - SYS_ADMIN       # NVMe admin commands (smartctl on NVMe)
+    # Uncomment and list YOUR disks to enable SMART. Whole devices, not
+    # partitions (/dev/sda, not /dev/sda1). Find them with:
+    #     lsblk -dno NAME,SIZE,MODEL
+    #
+    # Left commented out deliberately: Docker refuses to START a container
+    # whose `devices:` names a node that does not exist, so shipping a guess
+    # like /dev/sda would break first boot on any NVMe-only machine. SMART is
+    # optional; a container that starts is not.
+    # devices:
+    #   - /dev/sda:/dev/sda
+    #   - /dev/nvme0n1:/dev/nvme0n1
+
+    # Samba's smbd requires root: it binds port 445, switches uid per session
+    # to enforce per-user permissions, and manages its own passdb. There is no
+    # rootless configuration of smbd that still does per-user access control,
+    # so this container runs as root by design. See README > Privileges.
+    # user: is deliberately NOT set.
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

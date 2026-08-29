@@ -434,3 +434,36 @@ docker compose exec nas-dashboard python -m pytest tests -q
 
 Then create a user, share a folder, and connect from another machine —
 because that is the only test that actually counts.
+
+---
+
+## Re-verification: fresh clone, clean build, full chain
+
+A second, independent test pass, run against a fresh `git clone` of this
+repo's `main` branch on a newly created Ubuntu 24.04 + Docker VM — not the
+same container instances used above, so this confirms the repo works for
+someone starting from nothing, not just that a running instance kept working.
+
+**Result: pass.**
+
+- `docker compose build` succeeded on the first try, no manual fixes needed —
+  confirms the VFS-module and `secrets.tdb` fixes are actually in the pushed
+  code, not just in a container that happened to already be patched.
+- Container came up `healthy` on first boot.
+- Created two SMB users and a share through the API, exactly as a real user
+  would through the UI.
+- **Connected from macOS's own SMB client** (`mount_smbfs`) as a genuinely
+  separate device: mounted the share, read the existing file, wrote a new one.
+- Read-only enforcement re-confirmed: a write attempt from a read-only user
+  returned `NT_STATUS_ACCESS_DENIED` from Samba itself.
+- Wrong password re-confirmed: `NT_STATUS_LOGON_FAILURE`.
+- Unshare re-confirmed to revoke access immediately: the next connection
+  attempt got `NT_STATUS_BAD_NETWORK_NAME`.
+- Host stats re-confirmed accurate: `hostname` reported by the API
+  (`lima-nas`) matched the VM's own `hostname` command output exactly, and
+  `host_proc_bound` was `true`.
+- Full automated suite: **40/40 passed**, from a fresh install of the tests
+  into the built image (not carried over from a prior run).
+
+Same caveat as the rest of this document: this VM is aarch64, not the target
+NUC's presumed x86_64. Nothing else changed between runs.

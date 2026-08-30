@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { api } from './lib/api'
 import { ToastHost } from './components/Toast'
+import { Apps } from './pages/Apps'
 import { Dashboard } from './pages/Dashboard'
 import { Files } from './pages/Files'
 import { Shares } from './pages/Shares'
@@ -15,6 +16,7 @@ const NAV = [
   { to: '/files', label: 'Files', icon: '🗂️', end: false },
   { to: '/shares', label: 'Shares', icon: '🔗', end: false },
   { to: '/users', label: 'Users', icon: '👥', end: false },
+  { to: '/apps', label: 'Apps', icon: '🧩', end: false },
 ]
 
 export default function App() {
@@ -114,6 +116,7 @@ export default function App() {
             <Route path="/files/*" element={<Files onMenu={() => setMenuOpen(true)} />} />
             <Route path="/shares" element={<Shares onMenu={() => setMenuOpen(true)} />} />
             <Route path="/users" element={<Users onMenu={() => setMenuOpen(true)} />} />
+            <Route path="/apps" element={<Apps onMenu={() => setMenuOpen(true)} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

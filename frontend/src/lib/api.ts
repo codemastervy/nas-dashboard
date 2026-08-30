@@ -129,8 +129,15 @@ export interface User {
 
 // ---------------------------------------------------------------- endpoints
 
+export interface AppLink { name: string; icon: string; url: string }
+export interface AppsResponse {
+  apps: AppLink[]; exists: boolean; error: string | null
+  config_path: string; example: string
+}
+
 export const api = {
   authStatus: () => get<{ auth_required: boolean; configured: boolean; authenticated: boolean }>('/api/auth/status'),
+  apps: () => get<AppsResponse>('/api/apps'),
   login: (password: string) => post<{ authenticated: boolean }>('/api/auth/login', { password }),
   logout: () => post<{ authenticated: boolean }>('/api/auth/logout'),
 

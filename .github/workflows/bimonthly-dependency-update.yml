@@ -82,6 +82,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      # Needed to explicitly kick off ci.yml below -- see the comment there
+      # for why that's necessary at all.
+      actions: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -124,6 +127,17 @@ jobs:
 
           git commit -m "Bimonthly dependency update ($(date +%Y-%m-%d))"
           git push -u origin "$BRANCH"
+
+          # Pushes made with the workflow's own GITHUB_TOKEN do NOT trigger
+          # other workflows -- this is a deliberate GitHub Actions
+          # loop-prevention rule, not a bug, but it means ci.yml's normal
+          # `pull_request`/`push` triggers will never fire for this branch,
+          # so the required status checks it provides would never appear and
+          # `gh pr merge --auto` below would wait forever. Triggering ci.yml
+          # explicitly registers real check-runs against this exact commit,
+          # which is what branch protection actually looks at -- matched by
+          # commit SHA and check name, not by which event caused the run.
+          gh workflow run ci.yml --ref "$BRANCH"
 
           BODY=$'Approved via the `dependency-approval` environment on '"$(date +%Y-%m-%d)"$'.\n\nThis still has to pass backend-tests, frontend-build and docker-build --\nrequired by branch protection on `main` -- before it can merge. If any of\nthose fail, this PR stays open, unmerged, for you to look at.'
           PR_URL=$(gh pr create --title "Bimonthly dependency update ($(date +%Y-%m-%d))" --body "$BODY")

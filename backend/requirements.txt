@@ -2,6 +2,6 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 psutil==6.1.1
 python-multipart==0.0.20
-pydantic==2.10.5
+pydantic==2.13.4
 itsdangerous==2.2.0
 passlib[bcrypt]==1.7.4

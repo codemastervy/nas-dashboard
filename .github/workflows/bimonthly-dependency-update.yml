@@ -118,7 +118,7 @@ jobs:
           # what makes it show up in your own commit history and
           # contribution graph rather than the bot's.
           git config user.name "codemastervy"
-          git config user.email "isherveer@amirulandalib.eu.org"
+          git config user.email "isherveer@gmail.com"
 
           BRANCH="deps/bimonthly-$(date +%Y-%m-%d)"
           git checkout -b "$BRANCH"

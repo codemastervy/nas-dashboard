@@ -1,0 +1,133 @@
+name: Bimonthly dependency update
+
+# Runs itself every 2 months, checks every dependency for a newer version,
+# and PAUSES for your approval before touching anything. Approving is a
+# real GitHub Environment review -- GitHub emails you (via your own
+# notification settings) with a link to an Approve/Reject button on
+# github.com. Nothing is applied until you click it, and even after you
+# approve, the update still has to pass the same CI checks (backend
+# tests, frontend build, Docker build) as any other change before it can
+# merge -- branch protection on main enforces that regardless.
+on:
+  schedule:
+    # 09:00 UTC on the 1st of every odd month -- an approximation of "every
+    # 2 months" using plain cron, which has no native "every N months" unit.
+    - cron: "0 9 1 1,3,5,7,9,11 *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.summarize.outputs.has_updates }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check pip
+        run: |
+          pip install -r backend/requirements.txt >/dev/null
+          pip list --outdated --format=json > pip-outdated.json
+
+      - name: Check npm
+        run: |
+          cd frontend
+          npm ci >/dev/null 2>&1
+          npm outdated --json > ../npm-outdated.json || true
+
+      - name: Check Docker base images
+        run: python3 scripts/check_docker_base.py > docker-outdated.json
+
+      - name: Summarize
+        id: summarize
+        run: |
+          python3 scripts/summarize_updates.py \
+            pip-outdated.json npm-outdated.json docker-outdated.json
+          if [ -s summary.md ]; then
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: outdated-reports
+          path: |
+            pip-outdated.json
+            npm-outdated.json
+            docker-outdated.json
+            summary.md
+
+  # This job's only purpose is the `environment:` line below. A job that
+  # targets an Environment with a required reviewer configured will not
+  # start until that reviewer approves it -- which is what generates the
+  # GitHub notification email with the Approve/Reject link.
+  await-approval:
+    needs: check
+    if: needs.check.outputs.has_updates == 'true'
+    runs-on: ubuntu-latest
+    environment: dependency-approval
+    steps:
+      - run: echo "Approved -- applying the updates found above."
+
+  apply:
+    needs: [check, await-approval]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/download-artifact@v4
+        with:
+          name: outdated-reports
+
+      - name: Bump backend/requirements.txt
+        run: python3 scripts/apply_pip_updates.py
+
+      - name: Bump frontend dependencies (npm-check-updates)
+        run: |
+          cd frontend
+          npx --yes npm-check-updates -u
+          npm install
+
+      - name: Bump Dockerfile base images
+        run: python3 scripts/apply_docker_update.py
+
+      - name: Commit, open a PR, and request auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="deps/bimonthly-$(date +%Y-%m-%d)"
+          git checkout -b "$BRANCH"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Nothing actually changed (versions may already be current)."
+            exit 0
+          fi
+
+          git commit -m "Bimonthly dependency update ($(date +%Y-%m-%d))"
+          git push -u origin "$BRANCH"
+
+          BODY=$'Approved via the `dependency-approval` environment on '"$(date +%Y-%m-%d)"$'.\n\nThis still has to pass backend-tests, frontend-build and docker-build --\nrequired by branch protection on `main` -- before it can merge. If any of\nthose fail, this PR stays open, unmerged, for you to look at.'
+          PR_URL=$(gh pr create --title "Bimonthly dependency update ($(date +%Y-%m-%d))" --body "$BODY")
+
+          # This does NOT merge immediately: it only takes effect once every
+          # required status check on this PR has passed.
+          gh pr merge --auto --squash "$PR_URL"

@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth
 from .config import (ADMIN_PASSWORD, AUTH_ENABLED, DATA_DIR, HOST_PROC,
                      SMB_SHARES_DIR, STORAGE_ROOT)
+from .routes import apps as apps_routes
 from .routes import auth_routes, files, shares, system, users
 from .services import hostproc, samba, smbusers
 
@@ -39,6 +40,7 @@ app.include_router(system.router)
 app.include_router(files.router)
 app.include_router(shares.router)
 app.include_router(users.router)
+app.include_router(apps_routes.router)
 
 
 @app.on_event("startup")

@@ -276,6 +276,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .file-row .name button:hover { color: var(--accent); text-decoration: underline; }
 .file-row .size, .file-row .date { color: var(--text-muted); font-size: 12.5px; }
 
+.app-row {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  text-decoration: none; color: inherit;
+}
+.app-row:last-child { border-bottom: none; }
+.app-row:hover { background: var(--card-hover); }
+.app-row .icon-glyph { font-size: 19px; text-align: center; }
+.app-row .icon-img { width: 26px; height: 26px; border-radius: 6px; object-fit: contain; }
+.app-row .app-url { color: var(--text-faint); font-size: 12px; margin-left: 8px; }
+
 .file-grid {
   display: grid; gap: 10px;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));

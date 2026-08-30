@@ -5,3 +5,4 @@ python-multipart==0.0.20
 pydantic==2.10.5
 itsdangerous==2.2.0
 passlib[bcrypt]==1.7.4
+PyYAML==6.0.2

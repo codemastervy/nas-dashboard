@@ -1,0 +1,58 @@
+{
+  "@types/react": {
+    "current": "18.3.31",
+    "wanted": "18.3.31",
+    "latest": "19.2.18",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/@types/react"
+  },
+  "@types/react-dom": {
+    "current": "18.3.7",
+    "wanted": "18.3.7",
+    "latest": "19.2.5",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/@types/react-dom"
+  },
+  "@vitejs/plugin-react": {
+    "current": "4.7.0",
+    "wanted": "4.7.0",
+    "latest": "6.1.1",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/@vitejs/plugin-react"
+  },
+  "react": {
+    "current": "18.3.1",
+    "wanted": "18.3.1",
+    "latest": "19.2.8",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/react"
+  },
+  "react-dom": {
+    "current": "18.3.1",
+    "wanted": "18.3.1",
+    "latest": "19.2.8",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/react-dom"
+  },
+  "react-router-dom": {
+    "current": "6.30.6",
+    "wanted": "6.30.6",
+    "latest": "7.18.3",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/react-router-dom"
+  },
+  "typescript": {
+    "current": "5.9.3",
+    "wanted": "5.9.3",
+    "latest": "7.0.2",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/typescript"
+  },
+  "vite": {
+    "current": "5.4.21",
+    "wanted": "5.4.21",
+    "latest": "8.2.2",
+    "dependent": "frontend",
+    "location": "/home/runner/work/nas-dashboard/nas-dashboard/frontend/node_modules/vite"
+  }
+}

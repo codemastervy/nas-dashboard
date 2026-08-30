@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: build the SPA
 # ---------------------------------------------------------------------------
-FROM node:26-bookworm-slim AS frontend
+FROM node:20-bookworm-slim AS frontend
 
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json* ./
@@ -15,7 +15,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: runtime
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

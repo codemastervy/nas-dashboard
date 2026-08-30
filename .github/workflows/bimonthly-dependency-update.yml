@@ -113,8 +113,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Attributed to the account that approved it, not the bot -- an
+          # approved bimonthly update is real, reviewed work, and this is
+          # what makes it show up in your own commit history and
+          # contribution graph rather than the bot's.
+          git config user.name "codemastervy"
+          git config user.email "isherveer@amirulandalib.eu.org"
 
           BRANCH="deps/bimonthly-$(date +%Y-%m-%d)"
           git checkout -b "$BRANCH"

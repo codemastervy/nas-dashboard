@@ -32,6 +32,10 @@ Files written from a Mac over SMB, visible immediately in the browser.
 
 <img src="docs/screenshots/shares.png" alt="Shares page listing two SMB shares with per-user access and Unshare buttons" width="820">
 
+### Apps
+
+<img src="docs/screenshots/apps.png" alt="Apps launcher page showing a grid of linked services with icons" width="820">
+
 ### Mobile
 
 <img src="docs/screenshots/mobile.png" alt="File browser on a phone-sized viewport" width="280">
@@ -398,27 +402,45 @@ everything else persistent. That's deliberate: this list is exactly the kind
 of thing you set up once and barely touch, and a flat file is easier to back
 up, script, or hand-edit over SSH than a form ever needs to be.
 
-```yaml
-apps:
-  - name: Portainer
-    icon: "🐳"
-    url: http://192.168.1.10:9000
-  - name: Plex
-    icon: https://raw.githubusercontent.com/plexinc/pms-docker/master/plex.png
-    url: http://192.168.1.10:32400/web
-  - name: Router Admin
-    url: http://192.168.1.1
-```
+### Setting it up
+
+1. SSH into the machine running the container (or open a terminal there), and
+   go to wherever you keep `docker-compose.yml` for this project.
+2. Create (or edit) `data/apps.yml` — that's the same `data/` directory the
+   compose file already mounts to `/data`, so nothing extra needs mounting:
+
+   ```bash
+   nano data/apps.yml
+   ```
+
+3. Add one entry per app or link you want on the page:
+
+   ```yaml
+   apps:
+     - name: Portainer
+       icon: "🐳"
+       url: http://192.168.1.10:9000
+     - name: Plex
+       icon: https://raw.githubusercontent.com/plexinc/pms-docker/master/plex.png
+       url: http://192.168.1.10:32400/web
+     - name: Router Admin
+       url: http://192.168.1.1
+   ```
+
+4. Save, then open **Apps** in the sidebar and refresh the browser — no
+   `docker compose restart` needed, the file is read fresh on every request.
+
+Format reference:
 
 - `name` and `url` are required; an entry missing either is skipped (not
   fatal to the rest of the file).
 - `icon` is optional. Either an emoji/character, or a URL to an image —
   anything starting with `http://` or `https://` is rendered as an `<img>`.
   With no icon, a generic 🧩 is shown.
-- The file is read fresh on every page load — **no restart needed**. Edit it,
-  refresh the browser.
 - Invalid YAML is reported on the page itself, with the exact parser error
-  and the path it looked at, rather than silently showing nothing.
+  and the path it looked at, rather than silently showing nothing — so if
+  the page looks empty right after editing, check for a typo before assuming
+  it didn't save.
 
 ---
 

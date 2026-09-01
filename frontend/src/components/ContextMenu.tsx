@@ -33,14 +33,24 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   }, [x, y])
 
   useEffect(() => {
+    // Capture phase, so this sees the click before anything underneath it
+    // does -- but that also means it fires before the menu's OWN buttons get
+    // their click, so a click on a menu item must be excluded here rather
+    // than relying on stopPropagation() to save it: propagation only
+    // affects listeners still pending in the dispatch order, and a capture
+    // listener on `document` has already run before the event reaches (and
+    // bubbles back out of) a descendant like a menu button.
+    const dismissIfOutside = (e: MouseEvent) => {
+      if (ref.current?.contains(e.target as Node)) return
+      onClose()
+    }
     const dismiss = () => onClose()
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    // `capture` so a click anywhere closes before it activates something else.
-    document.addEventListener('mousedown', dismiss, true)
+    document.addEventListener('mousedown', dismissIfOutside, true)
     document.addEventListener('scroll', dismiss, true)
     document.addEventListener('keydown', onKey)
     return () => {
-      document.removeEventListener('mousedown', dismiss, true)
+      document.removeEventListener('mousedown', dismissIfOutside, true)
       document.removeEventListener('scroll', dismiss, true)
       document.removeEventListener('keydown', onKey)
     }
@@ -48,8 +58,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
 
   return (
     <div className="context-menu" ref={ref}
-         style={{ left: pos.x, top: pos.y }}
-         onMouseDown={(e) => e.stopPropagation()}>
+         style={{ left: pos.x, top: pos.y }}>
       {items.map((item, i) => (
         <Fragmentish key={i} separator={item.separatorBefore && i > 0}>
           <button className={item.danger ? 'danger' : ''}

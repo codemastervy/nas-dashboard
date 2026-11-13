@@ -1,3 +1,4 @@
+import { Icon } from '../components/Icon'
 import { useEffect, useState } from 'react'
 import { TopBar } from '../App'
 import { api, AppLink } from '../lib/api'
@@ -5,8 +6,9 @@ import { api, AppLink } from '../lib/api'
 type ViewMode = 'list' | 'grid'
 
 /** An app's icon: an emoji/character, or an image URL -- Homer-style. */
-function AppIcon({ icon }: { icon: string }) {
-  if (!icon) return <span className="icon-glyph glyph">🧩</span>
+function AppIcon({ icon, name }: { icon: string; name: string }) {
+  // No icon configured: a monogram tells apps apart better than one shared placeholder.
+  if (!icon) return <span className="icon-glyph monogram" aria-hidden="true">{(name.trim()[0] ?? '?').toUpperCase()}</span>
   if (icon.startsWith('http://') || icon.startsWith('https://')) {
     return (
       <img className="icon-img" src={icon} alt=""
@@ -47,9 +49,9 @@ export function Apps({ onMenu }: { onMenu: () => void }) {
     <>
       <TopBar title="Apps" onMenu={onMenu}>
         <button className={`btn sm ${view === 'list' ? 'primary' : ''}`}
-                onClick={() => setView('list')} aria-label="List view">☰</button>
+                onClick={() => setView('list')} aria-label="List view"><Icon name="list" /></button>
         <button className={`btn sm ${view === 'grid' ? 'primary' : ''}`}
-                onClick={() => setView('grid')} aria-label="Grid view">▦</button>
+                onClick={() => setView('grid')} aria-label="Grid view"><Icon name="grid" /></button>
       </TopBar>
 
       <div className="content">
@@ -61,7 +63,7 @@ export function Apps({ onMenu }: { onMenu: () => void }) {
           </div>
         ) : empty ? (
           <div className="empty">
-            <span className="glyph">🧩</span>
+            <span className="glyph"><Icon name="apps" size={30} /></span>
             {!exists ? 'No apps configured yet.' : 'apps.yml has no apps listed.'}
             <div className="hint" style={{ margin: '12px auto 0', maxWidth: 480, textAlign: 'left' }}>
               Create <span className="mono">{configPath}</span> on the host — it's the
@@ -81,7 +83,7 @@ export function Apps({ onMenu }: { onMenu: () => void }) {
             {apps.map((a) => (
               <a key={a.name + a.url} className="app-row"
                  href={a.url} target="_blank" rel="noopener noreferrer">
-                <AppIcon icon={a.icon} />
+                <AppIcon icon={a.icon} name={a.name} />
                 <span className="truncate">
                   {a.name}<span className="app-url">{a.url}</span>
                 </span>
@@ -94,7 +96,7 @@ export function Apps({ onMenu }: { onMenu: () => void }) {
               <a key={a.name + a.url} className="file-tile"
                  href={a.url} target="_blank" rel="noopener noreferrer"
                  style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="glyph"><AppIcon icon={a.icon} /></div>
+                <div className="glyph"><AppIcon icon={a.icon} name={a.name} /></div>
                 <div className="label">{a.name}</div>
               </a>
             ))}

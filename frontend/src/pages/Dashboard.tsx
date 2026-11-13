@@ -1,3 +1,4 @@
+import { Icon } from '../components/Icon'
 import { useEffect, useRef, useState } from 'react'
 import { TopBar } from '../App'
 import { api, SmartReport, Stats } from '../lib/api'
@@ -176,7 +177,7 @@ export function Dashboard({ onMenu }: { onMenu: () => void }) {
               {physical.map((nic) => (
                 <div key={nic.name}>
                   <div className="row">
-                    <span>{nic.kind === 'wifi' ? '📶' : '🔌'}</span>
+                    <span>{nic.kind === 'wifi' ? <Icon name="wifi" /> : <Icon name="ethernet" />}</span>
                     <strong style={{ fontSize: 13.5 }}>{nic.name}</strong>
                     <span className="badge">{nic.kind === 'wifi' ? 'WiFi' : 'Ethernet'}</span>
                     <span className="spacer" />
@@ -269,7 +270,7 @@ export function Dashboard({ onMenu }: { onMenu: () => void }) {
                         Last scan {when(d.scanned_at)}
                       </div>
                       {d.warnings.map((w, i) => (
-                        <div key={i} className="metric-sub" style={{ color: 'var(--warn)' }}>⚠ {w}</div>
+                        <div key={i} className="metric-sub" style={{ color: 'var(--warn)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon name="warning" size={13} /> {w}</div>
                       ))}
                       {d.error && (
                         <div className="metric-sub" style={{ color: 'var(--text-faint)' }}>{d.error}</div>

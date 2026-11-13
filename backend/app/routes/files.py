@@ -19,6 +19,21 @@ router = APIRouter(prefix="/api/files", tags=["files"],
                    dependencies=[Depends(require_auth)])
 
 
+# Types a browser can display without running anything. Everything else is
+# forced to download: HTML or SVG served inline from this origin would run
+# script with the admin session, and anyone who can write to a share can put
+# such a file there.
+_INLINE_PREFIXES = ("image/", "video/", "audio/")
+_INLINE_EXACT = {"application/pdf", "text/plain"}
+_NEVER_INLINE = {"image/svg+xml"}
+
+
+def _inline_safe(media_type: str) -> bool:
+    if media_type in _NEVER_INLINE:
+        return False
+    return media_type in _INLINE_EXACT or media_type.startswith(_INLINE_PREFIXES)
+
+
 def _wrap(exc: fs.FsError) -> HTTPException:
     return HTTPException(status_code=exc.status, detail=exc.message)
 
@@ -135,14 +150,22 @@ async def download_file(path: str = Query(...), inline: bool = Query(False)):
         or "application/octet-stream"
     # RFC 5987 encoding so non-ASCII filenames survive the round trip.
     quoted = urllib.parse.quote(node.real.name)
-    disposition = "inline" if inline else "attachment"
-    return StreamingResponse(
-        fs.iter_file(node.real),
-        media_type=media_type,
-        headers={
-            "Content-Disposition":
-                f"{disposition}; filename*=UTF-8''{quoted}",
-            "Content-Length": str(node.real.stat().st_size),
-            "Accept-Ranges": "none",
-        },
-    )
+    show_inline = inline and _inline_safe(media_type)
+    disposition = "inline" if show_inline else "attachment"
+    headers = {
+        "Content-Disposition": f"{disposition}; filename*=UTF-8''{quoted}",
+        "Content-Length": str(node.real.stat().st_size),
+        "Accept-Ranges": "none",
+        "X-Content-Type-Options": "nosniff",
+    }
+    if media_type != "application/pdf":
+        # Belt and braces: even if a browser were to render this as a
+        # document, it gets no script, no network and a sandboxed origin.
+        # PDFs are exempt because the built-in viewer refuses a sandbox.
+        headers["Content-Security-Policy"] = (
+            "sandbox; default-src 'none'; style-src 'unsafe-inline'; "
+            "img-src 'self' data:; media-src 'self'")
+    if not show_inline and media_type.startswith("text/"):
+        media_type = "application/octet-stream"
+    return StreamingResponse(fs.iter_file(node.real), media_type=media_type,
+                             headers=headers)

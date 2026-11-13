@@ -78,6 +78,22 @@ def _normalise(virtual: str) -> PurePosixPath:
     return PurePosixPath("/", *parts)
 
 
+def resolve_entry(virtual: str) -> Resolved:
+    """Like `resolve`, but does not follow a symlink in the final component.
+
+    For operations that act on the directory entry itself. Deleting a symlink
+    must remove the link, not empty out whatever it points at.
+    """
+    norm = _normalise(virtual)
+    if len([p for p in norm.parts if p != "/"]) < 2:
+        return resolve(virtual)
+    parent = resolve(str(norm.parent))
+    real = parent.real / norm.name
+    if not os.path.lexists(real):
+        raise FsError("no such file or directory", 404)
+    return Resolved(virtual=str(norm), real=real, volume=parent.volume)
+
+
 def resolve(virtual: str, must_exist: bool = True) -> Resolved:
     """Turn a virtual path into a real one, refusing anything outside a volume."""
     norm = _normalise(virtual)
@@ -263,6 +279,10 @@ def _reject_bad_name(name: str) -> None:
         raise FsError("invalid name", 400)
     if "/" in name or "\x00" in name:
         raise FsError("a name may not contain '/'", 400)
+    # A newline in a folder name would later end up inside smb.conf if the
+    # folder were shared; there is no legitimate use for control characters.
+    if any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise FsError("a name may not contain control characters", 400)
     if len(name.encode()) > 255:
         raise FsError("name is too long", 400)
 
@@ -334,7 +354,7 @@ def delete(paths: list[str]) -> dict[str, Any]:
     deleted, failed = [], []
     for virtual in paths:
         try:
-            node = resolve(virtual)
+            node = resolve_entry(virtual)
             if node.real == (STORAGE_ROOT / node.volume).resolve():
                 raise FsError("refusing to delete a volume root", 403)
             _remove(node.real)

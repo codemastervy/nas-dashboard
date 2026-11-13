@@ -44,6 +44,12 @@ services:
       # NetBIOS discovery. Turn off if you always connect by IP or hostname.
       ENABLE_NMBD: "true"
 
+      # Behind a reverse proxy? Set this to the proxy's IP so its
+      # X-Forwarded-For / X-Forwarded-Proto headers are trusted. By default
+      # only 127.0.0.1 is, so a client cannot forge its address to dodge the
+      # failed-login throttle.
+      # FORWARDED_ALLOW_IPS: "127.0.0.1"
+
       TZ: "${TZ:-UTC}"
 
     volumes:

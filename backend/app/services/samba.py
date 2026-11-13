@@ -102,7 +102,7 @@ def _render_share(share: dict[str, Any]) -> str:
     lines = [f"[{_escape(share['name'])}]"]
     if share.get("comment"):
         lines.append(f"   comment = {_escape(share['comment'])}")
-    lines.append(f"   path = {share['real_path']}")
+    lines.append(f"   path = {_escape(share['real_path'])}")
     lines.append("   browseable = yes")
 
     if share.get("guest_ok"):
@@ -243,6 +243,13 @@ def create_share(virtual_path: str, name: str, members: list[dict[str, Any]],
 
     # The container's path is what smbd will open, since smbd runs here.
     real_path = str(node.real)
+    # smb.conf is line-oriented and expands %-macros in `path`. A folder named
+    # with a newline could smuggle in a directive (`root preexec`, say), so
+    # such a path is refused rather than escaped.
+    if any(ord(c) < 32 or ord(c) == 127 for c in real_path) or "%" in real_path:
+        raise ShareError("this folder's path contains characters that cannot "
+                         "be shared safely (control characters or '%'); "
+                         "rename it first", 400)
     if any(s["real_path"] == real_path for s in list_shares()):
         raise ShareError("that folder is already shared", 409)
 
